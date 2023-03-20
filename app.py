@@ -12,7 +12,7 @@ db = SQLAlchemy(app)
 class QRCodeDataDb(db.Model):
     qr_code_data_id = db.Column(db.Integer, primary_key=True)
     certURL = db.Column(db.String, nullable=False)
-    expires = db.Column(db.DateTime, nullable=False)
+    expires = db.Column(db.String, nullable=False)
 
     def __repr__(self):
         return self.name
@@ -21,7 +21,7 @@ class QRCodeDataDb(db.Model):
 qrCodeDataFields = {
     'qr_code_data_id': fields.Integer,
     'certURL': fields.String,
-    'expires': fields.DateTime
+    'expires': fields.String
 }
 
 
