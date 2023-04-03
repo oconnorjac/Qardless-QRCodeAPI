@@ -35,14 +35,14 @@ class QRCodeData(Resource):
         qr_code_data = QRCodeDataDb.query.all()
         return qr_code_data
 
-    # @marshal_with(qrCodeDataFields)
-    # def post(self):
-    #    data = request.json
-    #    qr_code_data = QRCodeDataDb(certURL=data['certURL'], expires=data['expires'])
-    #    db.session.add(qr_code_data)
-    #    db.session.commit()
-    #    qr_code_data = QRCodeDataDb.query.all()
-    #    return qr_code_data
+    @marshal_with(qrCodeDataFields)
+    def post(self):
+        data = request.json
+        qr_code_data = QRCodeDataDb(certURL=data['certURL'], expires=data['expires'])
+        db.session.add(qr_code_data)
+        db.session.commit()
+        qr_code_data = QRCodeDataDb.query.all()
+        return qr_code_data
 
     @marshal_with(qrCodeDataFields)
     def put(self, pk):
@@ -84,6 +84,8 @@ def generate_qrcode():
     img_bytes.seek(0)
 
     return send_file(img_bytes, mimetype='image/png')
+
+# http://127.0.0.1:5000/generate_qrcode?pdf_url=https://qardlesspdfs.blob.core.windows.net/pdfs/MHT767-2505.pdf
 
 
 api.add_resource(QRCodeData, '/')
