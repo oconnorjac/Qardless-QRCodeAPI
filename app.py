@@ -15,8 +15,12 @@ db = SQLAlchemy(app)
 
 class QRCodeDataDb(db.Model):
     qr_code_data_id = db.Column(db.Integer, primary_key=True)
+    userEmail = db.Column(db.String, nullable=False)
     certURL = db.Column(db.String, nullable=False)
+    scanned = db.Column(db.String, nullable=False)
     expires = db.Column(db.String, nullable=False)
+    latitude = db.Column(db.Float, nullable=False)
+    longitude = db.Column(db.Float, nullable=False)
 
     def __repr__(self):
         return self.name
@@ -24,8 +28,12 @@ class QRCodeDataDb(db.Model):
 
 qrCodeDataFields = {
     'qr_code_data_id': fields.Integer,
+    'userEmail': fields.String,
     'certURL': fields.String,
-    'expires': fields.String
+    'scanned': fields.String,
+    'expires': fields.String,
+    'latitude': fields.Float,
+    'longitude': fields.Float
 }
 
 
@@ -38,7 +46,13 @@ class QRCodeData(Resource):
     @marshal_with(qrCodeDataFields)
     def post(self):
         data = request.json
-        qr_code_data = QRCodeDataDb(certURL=data['certURL'], expires=data['expires'])
+        qr_code_data = QRCodeDataDb(userEmail=data['userEmail'],
+                                    certURL=data['certURL'],
+                                    scanned=data['scanned'],
+                                    expires=data['expires'],
+                                    latitude=data['latitude'],
+                                    longitude=data['longitude']
+                                    )
         db.session.add(qr_code_data)
         db.session.commit()
         qr_code_data = QRCodeDataDb.query.all()
@@ -89,6 +103,7 @@ def generate_qrcode():
 
 
 api.add_resource(QRCodeData, '/')
+# api.add_resource(QRCodeData, '/<int:qr_code_data_id>')
 api.add_resource(SingleQRCodeData, '/')
 
 if __name__ == '__main__':
