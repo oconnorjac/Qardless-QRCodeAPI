@@ -1,4 +1,3 @@
-import base64
 import qrcode
 
 from flask import Flask, request, send_file
@@ -103,7 +102,6 @@ def generate_qrcode():
 
 
 api.add_resource(QRCodeData, '/')
-# api.add_resource(QRCodeData, '/<int:qr_code_data_id>')
 api.add_resource(SingleQRCodeData, '/')
 
 if __name__ == '__main__':
