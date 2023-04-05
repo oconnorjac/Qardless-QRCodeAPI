@@ -1,83 +1,75 @@
+import pyodbc
 import qrcode
+import json
 
-from flask import Flask, request, send_file
-from flask_restful import Resource, Api, marshal_with, fields
-from flask_sqlalchemy import SQLAlchemy
+from flask import Flask, request, send_file, jsonify
+from flask_restful import Api
 from io import BytesIO
 
 app = Flask(__name__)
 api = Api(app)
 
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///qr_code_data.db'
-db = SQLAlchemy(app)
+with open('secrets.json') as f:
+    secrets = json.load(f)
+connection = pyodbc.connect(secrets['DATABASE_CONNECTION_STRING'])
 
 
-class QRCodeDataDb(db.Model):
-    qr_code_data_id = db.Column(db.Integer, primary_key=True)
-    userEmail = db.Column(db.String, nullable=False)
-    certNum = db.Column(db.String, nullable=False)
-    scanned = db.Column(db.String, nullable=False)
-    expires = db.Column(db.String, nullable=False)
-    latitude = db.Column(db.Float, nullable=False)
-    longitude = db.Column(db.Float, nullable=False)
+@app.route('/', methods=['GET'])
+def get():
+    cursor = connection.cursor()
+    cursor.execute("SELECT * FROM qr_code_data_db")
+    rows = cursor.fetchall()
 
-    def __repr__(self):
-        return self.name
+    qr_code_data = []
+    for row in rows:
+        qr_code_dic = {}
+        for column in row.cursor_description:
+            column_name = column[0]
+            column_value = getattr(row, column_name)
+            qr_code_dic[column_name] = column_value
+        qr_code_data.append(qr_code_dic)
 
-
-qrCodeDataFields = {
-    'qr_code_data_id': fields.Integer,
-    'userEmail': fields.String,
-    'certNum': fields.String,
-    'scanned': fields.String,
-    'expires': fields.String,
-    'latitude': fields.Float,
-    'longitude': fields.Float
-}
+    return jsonify(qr_code_data)
 
 
-class QRCodeData(Resource):
-    @marshal_with(qrCodeDataFields)
-    def get(self):
-        qr_code_data = QRCodeDataDb.query.all()
-        return qr_code_data
+@app.route('/data', methods=['POST'])
+def post():
+    cursor = connection.cursor()
+    qr_code_data = request.get_json()
 
-    @marshal_with(qrCodeDataFields)
-    def post(self):
-        data = request.json
-        qr_code_data = QRCodeDataDb(userEmail=data['userEmail'],
-                                    certNum=data['certNum'],
-                                    scanned=data['scanned'],
-                                    expires=data['expires'],
-                                    latitude=data['latitude'],
-                                    longitude=data['longitude']
-                                    )
-        db.session.add(qr_code_data)
-        db.session.commit()
-        qr_code_data = QRCodeDataDb.query.all()
-        return qr_code_data
+    qr_code_data_id = qr_code_data['QRCodeDataID']
+    user_email = qr_code_data['UserEmail']
+    cert_number = qr_code_data['CertNumber']
+    scanned = qr_code_data['Scanned']
+    expires = qr_code_data['Expires']
+    latitude = qr_code_data['Latitude']
+    longitude = qr_code_data['Longitude']
 
-    @marshal_with(qrCodeDataFields)
-    def put(self, pk):
-        data = request.json
-        qr_code_data = QRCodeDataDb.query.filter_by(qr_code_data_id=pk).first()
-        qr_code_data.certNum = data['certNum']
-        db.session.commit()
-        return QRCodeDataDb.query.all()
+    query = """
+        INSERT INTO qr_code_data_db 
+            (QRCodeDataID, UserEmail, CertNumber, Scanned, Expires, Latitude, Longitude)
+        VALUES 
+            (?, ?, ?, ?, ?, ?, ?)
+    """
 
-    @marshal_with(qrCodeDataFields)
-    def delete(self, pk):
-        qr_code_data = QRCodeDataDb.query.filter_by(qr_code_data_id=pk).first()
-        db.session.delete(qr_code_data)
-        db.session.commit()
-        return
+    values = (qr_code_data_id, user_email, cert_number, scanned, expires, latitude, longitude)
+
+    cursor.execute(query, values)
+    connection.commit()
+
+    return jsonify({"message": "Data added"}), 201
 
 
-class SingleQRCodeData(Resource):
-    @marshal_with(qrCodeDataFields)
-    def get(self, pk):
-        qr_code_data = QRCodeDataDb.query.filter_by(qr_code_data_id=pk).first()
-        return qr_code_data
+@app.route('/delete/<int:qr_code_data_id>', methods=['DELETE'])
+def delete(qr_code_data_id):
+    try:
+        cursor = connection.cursor()
+        cursor.execute("DELETE FROM qr_code_data_db WHERE QRCodeDataID = ?", qr_code_data_id)
+        connection.commit()
+        return jsonify({'message': 'Data deleted'}), 200
+    except Exception as e:
+        print(str(e))
+        return jsonify({'message': 'Failed to delete data'}), 500
 
 
 @app.route('/generate_qrcode', methods=['GET'])
@@ -98,11 +90,6 @@ def generate_qrcode():
 
     return send_file(img_bytes, mimetype='image/png')
 
-# http://127.0.0.1:5000/generate_qrcode?pdf_url=https://qardlesspdfs.blob.core.windows.net/pdfs/MHT767-2505.pdf
-
-
-api.add_resource(QRCodeData, '/')
-api.add_resource(SingleQRCodeData, '/')
 
 if __name__ == '__main__':
     app.run(debug=True)
