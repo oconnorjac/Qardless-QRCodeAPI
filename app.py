@@ -16,7 +16,8 @@ api = Api(app)
 # connection = pyodbc.connect(secrets['DATABASE_CONNECTION_STRING'])
 
 # HOSTED
-connection = os.environ.get('DATABASE_CONNECTION_STRING')
+connection_string = os.environ.get('DATABASE_CONNECTION_STRING')
+connection = pyodbc.connect(connection_string)
 
 
 @app.route('/', methods=['GET'])
