@@ -60,6 +60,18 @@ def post():
     return jsonify({"message": "Data added"}), 201
 
 
+@app.route('/delete/<int:qr_code_data_id>', methods=['DELETE'])
+def delete(qr_code_data_id):
+    try:
+        cursor = connection.cursor()
+        cursor.execute("DELETE FROM qr_code_data_db WHERE QRCodeDataID = ?", qr_code_data_id)
+        connection.commit()
+        return jsonify({'message': 'Data deleted'}), 200
+    except Exception as e:
+        print(str(e))
+        return jsonify({'message': 'Failed to delete data'}), 500
+
+
 @app.route('/generate_qrcode', methods=['GET'])
 def generate_qrcode():
     pdf_url = request.args.get('pdf_url')
