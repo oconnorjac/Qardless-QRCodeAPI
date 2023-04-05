@@ -1,6 +1,7 @@
 import pyodbc
-import qrcode
 import json
+import os
+import qrcode
 
 from flask import Flask, request, send_file, jsonify
 from flask_restful import Api
@@ -9,9 +10,13 @@ from io import BytesIO
 app = Flask(__name__)
 api = Api(app)
 
-with open('secrets.json') as f:
-    secrets = json.load(f)
-connection = pyodbc.connect(secrets['DATABASE_CONNECTION_STRING'])
+# LOCAL
+# with open('secrets.json') as f:
+#     secrets = json.load(f)
+# connection = pyodbc.connect(secrets['DATABASE_CONNECTION_STRING'])
+
+# HOSTED
+connection = os.environ.get('DATABASE_CONNECTION_STRING')
 
 
 @app.route('/', methods=['GET'])
