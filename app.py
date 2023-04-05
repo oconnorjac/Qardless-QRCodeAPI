@@ -14,7 +14,7 @@ with open('secrets.json') as f:
 connection = pyodbc.connect(secrets['DATABASE_CONNECTION_STRING'])
 
 
-@app.route('/')
+@app.route('/', methods=['GET'])
 def get():
     cursor = connection.cursor()
     cursor.execute("SELECT * FROM qr_code_data_db")
@@ -29,48 +29,35 @@ def get():
             qr_code_dic[column_name] = column_value
         qr_code_data.append(qr_code_dic)
 
-    cursor.close()
-    connection.close()
-
     return jsonify(qr_code_data)
 
 
-#     @marshal_with(qrCodeDataFields)
-#     def post(self):
-#         data = request.json
-#         qr_code_data = QRCodeDataDb(userEmail=data['userEmail'],
-#                                     certNum=data['certNum'],
-#                                     scanned=data['scanned'],
-#                                     expires=data['expires'],
-#                                     latitude=data['latitude'],
-#                                     longitude=data['longitude']
-#                                     )
-#         db.session.add(qr_code_data)
-#         db.session.commit()
-#         qr_code_data = QRCodeDataDb.query.all()
-#         return qr_code_data
-#
-#     @marshal_with(qrCodeDataFields)
-#     def put(self, pk):
-#         data = request.json
-#         qr_code_data = QRCodeDataDb.query.filter_by(qr_code_data_id=pk).first()
-#         qr_code_data.certNum = data['certNum']
-#         db.session.commit()
-#         return QRCodeDataDb.query.all()
-#
-#     @marshal_with(qrCodeDataFields)
-#     def delete(self, pk):
-#         qr_code_data = QRCodeDataDb.query.filter_by(qr_code_data_id=pk).first()
-#         db.session.delete(qr_code_data)
-#         db.session.commit()
-#         return
-#
-#
-# class SingleQRCodeData(Resource):
-#     @marshal_with(qrCodeDataFields)
-#     def get(self, pk):
-#         qr_code_data = QRCodeDataDb.query.filter_by(qr_code_data_id=pk).first()
-#         return qr_code_data
+@app.route('/data', methods=['POST'])
+def post():
+    cursor = connection.cursor()
+    qr_code_data = request.get_json()
+
+    qr_code_data_id = qr_code_data['QRCodeDataID']
+    user_email = qr_code_data['UserEmail']
+    cert_number = qr_code_data['CertNumber']
+    scanned = qr_code_data['Scanned']
+    expires = qr_code_data['Expires']
+    latitude = qr_code_data['Latitude']
+    longitude = qr_code_data['Longitude']
+
+    query = """
+        INSERT INTO qr_code_data_db 
+            (QRCodeDataID, UserEmail, CertNumber, Scanned, Expires, Latitude, Longitude)
+        VALUES 
+            (?, ?, ?, ?, ?, ?, ?)
+    """
+
+    values = (qr_code_data_id, user_email, cert_number, scanned, expires, latitude, longitude)
+
+    cursor.execute(query, values)
+    connection.commit()
+
+    return jsonify({"message": "Data added"}), 201
 
 
 @app.route('/generate_qrcode', methods=['GET'])
@@ -91,12 +78,6 @@ def generate_qrcode():
 
     return send_file(img_bytes, mimetype='image/png')
 
-
-# http://127.0.0.1:5000/generate_qrcode?pdf_url=https://qardlesspdfs.blob.core.windows.net/pdfs/MHT767-2505.pdf
-# https://qardlessqrcode.azurewebsites.net/generate_qrcode?pdf_url=https://qardlesspdfs.blob.core.windows.net/pdfs/MHT767-2505.pdf
-
-# api.add_resource(QRCodeData, '/')
-# api.add_resource(SingleQRCodeData, '/')
 
 if __name__ == '__main__':
     app.run(debug=True)
